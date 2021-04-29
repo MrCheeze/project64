@@ -215,4 +215,9 @@ private:
     static MIPS_DWORD m_MemLookupValue;
     static bool m_MemLookupValid;
     static uint32_t RegModValue;
+
+    bool m_IS64_Logging_Enabled;
+    uint32_t m_IS64_Logging_StartAddr;
+    uint32_t m_IS64_Logging_EndAddr;
+    uint8_t m_IS64_Logging_Buffer[0x10000];
 };

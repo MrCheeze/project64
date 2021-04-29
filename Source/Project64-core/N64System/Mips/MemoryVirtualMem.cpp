@@ -680,6 +680,16 @@ bool CMipsMemoryVM::LW_NonMemory(uint32_t PAddr, uint32_t* Value)
         return true;
     }
 #endif
+    
+    if (m_IS64_Logging_Enabled && PAddr >= m_IS64_Logging_StartAddr && PAddr < m_IS64_Logging_EndAddr) {
+        m_MemLookupAddress = PAddr;
+        m_MemLookupValue.UW[0] = (m_IS64_Logging_Buffer[(PAddr - m_IS64_Logging_StartAddr) + 0] << 24 |
+                                  m_IS64_Logging_Buffer[(PAddr - m_IS64_Logging_StartAddr) + 1] << 16 |
+                                  m_IS64_Logging_Buffer[(PAddr - m_IS64_Logging_StartAddr) + 2] << 8 |
+                                  m_IS64_Logging_Buffer[(PAddr - m_IS64_Logging_StartAddr) + 3] << 0);
+        *Value = m_MemLookupValue.UW[0];
+        return true;
+    }
 
     m_MemLookupAddress = PAddr;
     if (PAddr >= 0x10000000 && PAddr < 0x16000000)
@@ -794,6 +804,24 @@ bool CMipsMemoryVM::SW_NonMemory(uint32_t PAddr, uint32_t Value)
 {
     m_MemLookupValue.UW[0] = Value;
     m_MemLookupAddress = PAddr;
+
+    if (Value == 0x49533634) { // the string 'IS64'
+        m_IS64_Logging_Enabled = true;
+        m_IS64_Logging_StartAddr = PAddr;
+        m_IS64_Logging_EndAddr = PAddr + sizeof(m_IS64_Logging_Buffer);
+        memset(m_IS64_Logging_Buffer, 0, sizeof(m_IS64_Logging_Buffer));
+    }
+    if (m_IS64_Logging_Enabled && PAddr >= m_IS64_Logging_StartAddr && PAddr < m_IS64_Logging_EndAddr) {
+        if (PAddr == m_IS64_Logging_StartAddr + 0x14) {
+            g_Notify->DisplayError((char*)m_IS64_Logging_Buffer + 0x20);
+            memset(m_IS64_Logging_Buffer + 4, 0, sizeof(m_IS64_Logging_Buffer) - 4);
+        } else {
+            m_IS64_Logging_Buffer[(PAddr - m_IS64_Logging_StartAddr) + 0] = (uint8_t)(Value >> 24);
+            m_IS64_Logging_Buffer[(PAddr - m_IS64_Logging_StartAddr) + 1] = (uint8_t)(Value >> 16);
+            m_IS64_Logging_Buffer[(PAddr - m_IS64_Logging_StartAddr) + 2] = (uint8_t)(Value >> 8);
+            m_IS64_Logging_Buffer[(PAddr - m_IS64_Logging_StartAddr) + 3] = (uint8_t)(Value >> 0);
+        }
+    }
 
     if (PAddr >= 0x10000000 && PAddr < 0x16000000)
     {
